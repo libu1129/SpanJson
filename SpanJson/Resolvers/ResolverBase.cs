@@ -252,6 +252,61 @@ namespace SpanJson.Resolvers
 
         protected virtual IJsonFormatter BuildFormatter(Type type)
         {
+            // --- 👇 ArraySegment<T> 지원 분기 추가 👇 ---
+            if (type.IsConstructedGenericType
+                && type.GetGenericTypeDefinition() == typeof(ArraySegment<>))
+            {
+                // ArraySegment<TElem>에 대응하는 포매터 생성
+                var elemType      = type.GenericTypeArguments[0];
+                var formatterType = typeof(SpanJson.Formatters.ArraySegmentFormatter<,,>)
+                                        .MakeGenericType(
+                                            elemType,        // T
+                                            typeof(TSymbol), // TSymbol
+                                            typeof(TResolver)
+                                        );
+                return GetDefaultOrCreate(formatterType);
+            }
+            // --- 👆 여까지 추가 분기 👆 ---
+
+            // --- PooledString 지원 (UTF‑8 전용) ---
+            if (type == typeof(PooledString) && typeof(TSymbol) == typeof(byte))
+            {
+                // PooledStringFormatter<byte, TResolver> 인스턴스 반환
+                var fmtType = typeof(SpanJson.Formatters.PooledStringFormatter<>)
+                    .MakeGenericType(typeof(TResolver));
+                return GetDefaultOrCreate(fmtType);
+            }
+            // --- 여까지 PooledString 분기 ---
+
+            // --- DoubleFlexibleFormatter 등록 (숫자/문자열 모두 지원) ---
+            if (type == typeof(double) && typeof(TSymbol) == typeof(byte))
+            {
+                var fmtType = typeof(SpanJson.Formatters.DoubleFlexibleFormatter<>)
+                    .MakeGenericType(typeof(TResolver));
+                return GetDefaultOrCreate(fmtType);
+            }
+            // --- 여까지 DoubleFlexibleFormatter 분기 ---
+
+            // --- Int64FlexibleFormatter 등록 (숫자/문자열 구분) ---
+            if (type == typeof(long) && typeof(TSymbol) == typeof(byte))
+            {
+                var fmtType = typeof(SpanJson.Formatters.Int64FlexibleFormatter<>)
+                    .MakeGenericType(typeof(TResolver));
+                return GetDefaultOrCreate(fmtType);
+            }
+            // --- 여까지 Int64FlexibleFormatter 분기 ---
+
+
+
+
+
+
+
+
+
+
+
+
             if (type == typeof(byte[]) && _spanJsonOptions.ByteArrayOption == ByteArrayOptions.Base64)
             {
                 return GetDefaultOrCreate(typeof(ByteArrayBase64Formatter<TSymbol, TResolver>));
@@ -315,41 +370,6 @@ namespace SpanJson.Resolvers
                         return GetDefaultOrCreate(typeof(EnumIntegerFormatter<,,>).MakeGenericType(type, typeof(TSymbol), typeof(TResolver)));
                 }
             }
-
-            // --- 👇 ArraySegment<T> 지원 분기 추가 👇 ---
-            if (type.IsConstructedGenericType
-                && type.GetGenericTypeDefinition() == typeof(ArraySegment<>))
-            {
-                // ArraySegment<TElem>에 대응하는 포매터 생성
-                var elemType      = type.GenericTypeArguments[0];
-                var formatterType = typeof(SpanJson.Formatters.ArraySegmentFormatter<,,>)
-                                        .MakeGenericType(
-                                            elemType,        // T
-                                            typeof(TSymbol), // TSymbol
-                                            typeof(TResolver)
-                                        );
-                return GetDefaultOrCreate(formatterType);
-            }
-            // --- 👆 여까지 추가 분기 👆 ---
-
-            // --- PooledString 지원 (UTF‑8 전용) ---
-            if (type == typeof(PooledString) && typeof(TSymbol) == typeof(byte))
-            {
-                // PooledStringFormatter<byte, TResolver> 인스턴스 반환
-                var fmtType = typeof(SpanJson.Formatters.PooledStringFormatter<>)
-                    .MakeGenericType(typeof(TResolver));
-                return GetDefaultOrCreate(fmtType);
-            }
-            // --- 여까지 PooledString 분기 ---
-
-            // --- StringDouble 지원 (UTF‑8) ---
-            if (type == typeof(StringDouble) && typeof(TSymbol) == typeof(byte))
-            {
-                var fmtType = typeof(SpanJson.Formatters.StringDoubleFormatter<>)
-                    .MakeGenericType(typeof(TResolver));
-                return GetDefaultOrCreate(fmtType);
-            }
-            // --- 여까지 StringDouble 분기 ---
 
             if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(type))
             {

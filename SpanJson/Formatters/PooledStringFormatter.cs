@@ -33,12 +33,7 @@ public sealed class PooledStringFormatter<TResolver>
         if (reader.ReadIsNull())
             return default;
 
-        // allocation‑free로 바이트 스팬을 읽어옴
-        var utf8Span = reader.ReadUtf8StringSpan();
-
-        // 한 번만 string 할당하고 풀링
-        string raw    = Encoding.UTF8.GetString(utf8Span);
-        string pooled = s_pool.GetOrAdd(raw.AsSpan());
+        string pooled = s_pool.GetOrAdd(reader.ReadUtf8StringSpan(), encoding: Encoding.UTF8);
         return new PooledString(pooled);
     }
 
