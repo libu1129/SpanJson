@@ -6,11 +6,12 @@ namespace SpanJson
 {
     public ref partial struct JsonReader<TSymbol> where TSymbol : struct
     {
-        private readonly ReadOnlySpan<char> _chars;
-        private readonly ReadOnlySpan<byte> _bytes;
-        private readonly int _length;
+        public readonly ReadOnlySpan<char> _chars;
+        public readonly ReadOnlySpan<byte> _bytes;
+        public readonly int _length;
 
         private int _pos;
+        public int pos => _pos;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public JsonReader(in ReadOnlySpan<TSymbol> input)
@@ -311,7 +312,7 @@ namespace SpanJson
                 ThrowNotSupportedException();
             }
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public JsonToken ReadNextToken()
         {
@@ -377,6 +378,134 @@ namespace SpanJson
 
             ThrowNotSupportedException();
             return default;
+        }
+
+
+        /// <summary>
+        /// 현재 위치의 공백을 건너뛰고, 다음 한 개의 JSON 값(문자열,숫자,객체,배열,리터럴)을 원시 바이트 시퀀스로 읽어와 ReadOnlySpan/<byte/>로 반환합니다. 내부 _pos는 값의 바로 다음 위치로 이동합니다.
+        /// </summary>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReadOnlySpan<byte> ReadUtf8RawValueSpan()
+        {
+            // (1) 공백 있을 수도 없을 수도 있으니 무조건 스킵
+            SkipWhitespaceUtf8();
+
+            // (2) 토큰 시작 인덱스 기록
+            int start = _pos;
+            byte marker = _bytes[_pos++];
+
+            // (3) 토큰별로 읽기
+            switch (marker)
+            {
+                // --- 문자열: 따옴표 안에서 이스케이프 건너뛰며 마지막 따옴표까지 ---
+                case (byte)'"':
+                    while (_pos < _length)
+                    {
+                        byte b = _bytes[_pos++];
+                        if (b == (byte)'"') break;
+                        if (b == (byte)'\\' && _pos < _length) _pos++;
+                    }
+                    break;
+
+                // --- 객체: 중첩된 { } 추적, 내부 문자열도 처리 ---
+                case (byte)'{':
+                    int objDepth = 1;
+                    while (objDepth > 0 && _pos < _length)
+                    {
+                        byte b = _bytes[_pos++];
+                        if (b == (byte)'"')
+                        {
+                            // 문자열 내부 건너뛰기
+                            while (_pos < _length)
+                            {
+                                byte bb = _bytes[_pos++];
+                                if (bb == (byte)'"') break;
+                                if (bb == (byte)'\\' && _pos < _length) _pos++;
+                            }
+                        }
+                        else if (b == (byte)'{') objDepth++;
+                        else if (b == (byte)'}') objDepth--;
+                    }
+                    break;
+
+                // --- 배열: 중첩된 [ ] 추적, 내부 문자열도 처리 ---
+                case (byte)'[':
+                    int arrDepth = 1;
+                    while (arrDepth > 0 && _pos < _length)
+                    {
+                        byte b = _bytes[_pos++];
+                        if (b == (byte)'"')
+                        {
+                            while (_pos < _length)
+                            {
+                                byte bb = _bytes[_pos++];
+                                if (bb == (byte)'"') break;
+                                if (bb == (byte)'\\' && _pos < _length) _pos++;
+                            }
+                        }
+                        else if (b == (byte)'[') arrDepth++;
+                        else if (b == (byte)']') arrDepth--;
+                    }
+                    break;
+
+                // --- 숫자: 부호·소수·지수 표기까지 모두 읽기 ---
+                default:
+                    if (marker == (byte)'-' || (marker >= (byte)'0' && marker <= (byte)'9'))
+                    {
+                        while (_pos < _length)
+                        {
+                            byte c = _bytes[_pos];
+                            if ((c >= (byte)'0' && c <= (byte)'9')
+                                || c == (byte)'+'
+                                || c == (byte)'-'
+                                || c == (byte)'.'
+                                || c == (byte)'e'
+                                || c == (byte)'E')
+                            {
+                                _pos++;
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+                    // --- true, false, null 리터럴 ---
+                    else if (marker == (byte)'t'
+                             && _pos + 2 < _length
+                             && _bytes[_pos] == (byte)'r'
+                             && _bytes[_pos + 1] == (byte)'u'
+                             && _bytes[_pos + 2] == (byte)'e')
+                    {
+                        _pos += 3; // 'r','u','e'
+                    }
+                    else if (marker == (byte)'f'
+                             && _pos + 3 < _length
+                             && _bytes[_pos] == (byte)'a'
+                             && _bytes[_pos + 1] == (byte)'l'
+                             && _bytes[_pos + 2] == (byte)'s'
+                             && _bytes[_pos + 3] == (byte)'e')
+                    {
+                        _pos += 4; // 'a','l','s','e'
+                    }
+                    else if (marker == (byte)'n'
+                             && _pos + 2 < _length
+                             && _bytes[_pos] == (byte)'u'
+                             && _bytes[_pos + 1] == (byte)'l'
+                             && _bytes[_pos + 2] == (byte)'l')
+                    {
+                        _pos += 3; // 'u','l','l'
+                    }
+                    else
+                    {
+                        // 예기치 않은 토큰
+                        ThrowJsonParserException(JsonParserException.ParserError.InvalidEncoding);
+                    }
+                    break;
+            }
+
+            // (4) 슬라이스 반환
+            int len = _pos - start;
+            return _bytes.Slice(start, len);
         }
 
     }

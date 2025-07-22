@@ -314,6 +314,22 @@ namespace SpanJson.Resolvers
                 }
             }
 
+            // --- 👇 ArraySegment<T> 지원 분기 추가 👇 ---
+            if (type.IsConstructedGenericType
+                && type.GetGenericTypeDefinition() == typeof(ArraySegment<>))
+            {
+                // ArraySegment<TElem>에 대응하는 포매터 생성
+                var elemType      = type.GenericTypeArguments[0];
+                var formatterType = typeof(SpanJson.Formatters.ArraySegmentFormatter<,,>)
+                                        .MakeGenericType(
+                                            elemType,        // T
+                                            typeof(TSymbol), // TSymbol
+                                            typeof(TResolver)
+                                        );
+                return GetDefaultOrCreate(formatterType);
+            }
+            // --- 👆 여까지 추가 분기 👆 ---
+
             if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(type))
             {
                 return GetDefaultOrCreate(typeof(DynamicMetaObjectProviderFormatter<,,>).MakeGenericType(type, typeof(TSymbol), typeof(TResolver)));
