@@ -78,7 +78,7 @@ namespace SpanJson
 
                 public static object InnerDeserialize(in ReadOnlySpan<TSymbol> input, Type type)
                 {
-                    if (input == null)
+                    if (input.IsEmpty)
                     {
                         return null;
                     }

@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
 
+using Dubu;
+
 using SpanJson.Structs;
 
 using System;
@@ -24,16 +26,13 @@ public sealed class PooledStringFormatter<TResolver>
     public static readonly PooledStringFormatter<TResolver> Default
             = new PooledStringFormatter<TResolver>();
 
-    // CommunityToolkit.StringPool
-    private static readonly StringPool s_pool = new StringPool();
-
     // <-- IJsonFormatter<PooledString, byte> 에서 요구하는 메서드 시그니처 -->
     public PooledString Deserialize(ref JsonReader<byte> reader)
     {
         if (reader.ReadIsNull())
             return default;
 
-        string pooled = s_pool.GetOrAdd(reader.ReadUtf8StringSpan(), encoding: Encoding.UTF8);
+        string pooled = Dubu.DuStringPool.GetPooledString(reader.ReadUtf8StringSpan()); // DuStringPool..GetOrAdd(reader.ReadUtf8StringSpan(), encoding: Encoding.UTF8);
         return new PooledString(pooled);
     }
 
