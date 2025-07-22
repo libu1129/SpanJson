@@ -7,8 +7,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
+
 using SpanJson.Formatters;
 using SpanJson.Helpers;
+using SpanJson.Structs;
 // ReSharper disable VirtualMemberNeverOverridden.Global
 
 namespace SpanJson.Resolvers
@@ -144,7 +146,7 @@ namespace SpanJson.Resolvers
 
         public virtual IJsonFormatter<T, TSymbol> GetFormatter<T>()
         {
-            return (IJsonFormatter<T, TSymbol>) GetFormatter(typeof(T));
+            return (IJsonFormatter<T, TSymbol>)GetFormatter(typeof(T));
         }
 
         public virtual JsonObjectDescription GetObjectDescription<T>()
@@ -329,6 +331,25 @@ namespace SpanJson.Resolvers
                 return GetDefaultOrCreate(formatterType);
             }
             // --- 👆 여까지 추가 분기 👆 ---
+
+            // --- PooledString 지원 (UTF‑8 전용) ---
+            if (type == typeof(PooledString) && typeof(TSymbol) == typeof(byte))
+            {
+                // PooledStringFormatter<byte, TResolver> 인스턴스 반환
+                var fmtType = typeof(SpanJson.Formatters.PooledStringFormatter<>)
+                    .MakeGenericType(typeof(TResolver));
+                return GetDefaultOrCreate(fmtType);
+            }
+            // --- 여까지 PooledString 분기 ---
+
+            // --- StringDouble 지원 (UTF‑8) ---
+            if (type == typeof(StringDouble) && typeof(TSymbol) == typeof(byte))
+            {
+                var fmtType = typeof(SpanJson.Formatters.StringDoubleFormatter<>)
+                    .MakeGenericType(typeof(TResolver));
+                return GetDefaultOrCreate(fmtType);
+            }
+            // --- 여까지 StringDouble 분기 ---
 
             if (typeof(IDynamicMetaObjectProvider).IsAssignableFrom(type))
             {
