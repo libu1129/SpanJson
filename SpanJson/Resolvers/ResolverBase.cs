@@ -258,7 +258,7 @@ namespace SpanJson.Resolvers
             {
                 // ArraySegment<TElem>에 대응하는 포매터 생성
                 var elemType      = type.GenericTypeArguments[0];
-                var formatterType = typeof(SpanJson.Formatters.ArraySegmentFormatter<,,>)
+                var formatterType = typeof(SpanJson.Formatters.PooledArraySegmentFormatter<,,>)
                                         .MakeGenericType(
                                             elemType,        // T
                                             typeof(TSymbol), // TSymbol
