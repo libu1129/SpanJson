@@ -272,7 +272,7 @@ namespace SpanJson.Resolvers
 
             // --- 👇 ArraySegment<T> 지원 분기 추가 👇 ---
             if (type.IsConstructedGenericType
-                && type.GetGenericTypeDefinition() == typeof(PooledArraySegment<>))
+                && type.GetGenericTypeDefinition() == typeof(DuPooledArraySegment<>))
             {
                 // ArraySegment<TElem>에 대응하는 포매터 생성
                 var elemType      = type.GenericTypeArguments[0];
