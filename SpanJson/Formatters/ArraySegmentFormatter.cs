@@ -15,14 +15,14 @@ namespace SpanJson.Formatters;
 /// <summary>
 /// ArraySegment/<T/> 전용 포매터
 /// </summary>
-public sealed class PooledArraySegmentFormatter<T, TSymbol, TResolver>
+public sealed class ArraySegmentFormatter<T, TSymbol, TResolver>
     : BaseFormatter
-    , IJsonFormatter<PooledArraySegment<T>, TSymbol>
+    , IJsonFormatter<ArraySegment<T>, TSymbol>
     where TResolver : IJsonFormatterResolver<TSymbol, TResolver>, new()
     where TSymbol : struct
 {
-    public static readonly PooledArraySegmentFormatter<T, TSymbol, TResolver> Default
-            = new PooledArraySegmentFormatter<T, TSymbol, TResolver>();
+    public static readonly ArraySegmentFormatter<T, TSymbol, TResolver> Default
+            = new ArraySegmentFormatter<T, TSymbol, TResolver>();
 
     // 요소 포매터
     private static readonly IJsonFormatter<T, TSymbol> ElementFormatter =
@@ -31,7 +31,7 @@ public sealed class PooledArraySegmentFormatter<T, TSymbol, TResolver>
     // 순환 참조 체크
     private static readonly bool IsRecursionCandidate = RecursionCandidate<T>.IsRecursionCandidate;
 
-    public PooledArraySegment<T> Deserialize(ref JsonReader<TSymbol> reader)
+    public ArraySegment<T> Deserialize(ref JsonReader<TSymbol> reader)
     {
         if (reader.ReadIsNull())
             return default;
@@ -53,10 +53,10 @@ public sealed class PooledArraySegmentFormatter<T, TSymbol, TResolver>
         }
 
         // ArraySegment로 래핑(반환 시점에 반드시 ArrayPool<T>.Shared.Return 해야 함)
-        return new PooledArraySegment<T>(poolBuffer, 0, count);
+        return new ArraySegment<T>(poolBuffer, 0, count);
     }
 
-    public void Serialize(ref JsonWriter<TSymbol> writer, PooledArraySegment<T> value)
+    public void Serialize(ref JsonWriter<TSymbol> writer, ArraySegment<T> value)
     {
         if (value.Array == null)
         {

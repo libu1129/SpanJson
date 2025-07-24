@@ -30,7 +30,10 @@ namespace SpanJson
             }
 
 
-            private static class Inner<T, TSymbol, TResolver> where TResolver : IJsonFormatterResolver<TSymbol, TResolver>, new() where TSymbol : struct
+            private static class Inner<T, TSymbol, TResolver> 
+                //where T : allows ref struct
+                where TResolver : IJsonFormatterResolver<TSymbol, TResolver>, new()
+                where TSymbol : struct
             {
                 private static readonly IJsonFormatter<T, TSymbol> Formatter = StandardResolvers.GetResolver<TSymbol, TResolver>().GetFormatter<T>();
 

@@ -8,6 +8,8 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 
+using Dubu;
+
 using SpanJson.Formatters;
 using SpanJson.Helpers;
 using SpanJson.Structs;
@@ -255,6 +257,22 @@ namespace SpanJson.Resolvers
             // --- 👇 ArraySegment<T> 지원 분기 추가 👇 ---
             if (type.IsConstructedGenericType
                 && type.GetGenericTypeDefinition() == typeof(ArraySegment<>))
+            {
+                // ArraySegment<TElem>에 대응하는 포매터 생성
+                var elemType      = type.GenericTypeArguments[0];
+                var formatterType = typeof(SpanJson.Formatters.ArraySegmentFormatter<,,>)
+                                        .MakeGenericType(
+                                            elemType,        // T
+                                            typeof(TSymbol), // TSymbol
+                                            typeof(TResolver)
+                                        );
+                return GetDefaultOrCreate(formatterType);
+            }
+            // --- 👆 여까지 추가 분기 👆 ---
+
+            // --- 👇 ArraySegment<T> 지원 분기 추가 👇 ---
+            if (type.IsConstructedGenericType
+                && type.GetGenericTypeDefinition() == typeof(PooledArraySegment<>))
             {
                 // ArraySegment<TElem>에 대응하는 포매터 생성
                 var elemType      = type.GenericTypeArguments[0];
